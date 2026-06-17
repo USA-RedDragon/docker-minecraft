@@ -3,24 +3,41 @@
     "extends": [
         "local>USA-RedDragon/renovate-configs"
     ],
-    "baseBranches": ["fabric","paper","/^mc\\/.*\\/.*/"],
-    "regexManagers": [
+    "baseBranchPatterns": [
+        "fabric",
+        "paper",
+        "/^mc\\/.*\\/.*/"
+    ],
+    "customManagers": [
         {
-            "fileMatch": ["(^|/)Dockerfile$"],
-            "matchStrings": ["ARG PAPER_VERSION=(?<currentValue>.*)"],
+            "customType": "regex",
+            "managerFilePatterns": [
+                "/(^|/)Dockerfile$/"
+            ],
+            "matchStrings": [
+                "ARG PAPER_VERSION=(?<currentValue>.*)"
+            ],
             "depNameTemplate": "paper-minecraft",
             "versioningTemplate": "semver-coerced",
             "datasourceTemplate": "custom.paper-minecraft"
         },
         {
-            "fileMatch": ["(^|/)Dockerfile$"],
-            "matchStrings": ["ARG PAPER_VERSION=(?<mcVersion>.*)\\nARG PAPER_BUILD=(?<currentValue>.*)"],
+            "customType": "regex",
+            "managerFilePatterns": [
+                "/(^|/)Dockerfile$/"
+            ],
+            "matchStrings": [
+                "ARG PAPER_VERSION=(?<mcVersion>.*)\\nARG PAPER_BUILD=(?<currentValue>.*)"
+            ],
             "depNameTemplate": "paper-{{{mcVersion}}}-builds",
             "versioningTemplate": "loose",
             "datasourceTemplate": "custom.paper-{{{mcVersion}}}-builds"
         },
         {
-            "fileMatch": ["(^|/)Dockerfile$"],
+            "customType": "regex",
+            "managerFilePatterns": [
+                "/(^|/)Dockerfile$/"
+            ],
             "matchStrings": [
                 "ARG FABRIC_VERSION=(?<currentValue>.*)"
             ],
@@ -28,7 +45,10 @@
             "depNameTemplate": "net.fabricmc:fabric-loader"
         },
         {
-            "fileMatch": ["(^|/)Dockerfile$"],
+            "customType": "regex",
+            "managerFilePatterns": [
+                "/(^|/)Dockerfile$/"
+            ],
             "matchStrings": [
                 "ARG INSTALLER_VERSION=(?<currentValue>.*)"
             ],
@@ -36,7 +56,10 @@
             "depNameTemplate": "net.fabricmc:fabric-installer"
         },
         {
-            "fileMatch": ["(^|/)Dockerfile$"],
+            "customType": "regex",
+            "managerFilePatterns": [
+                "/(^|/)Dockerfile$/"
+            ],
             "matchStrings": [
                 "ARG MC_VERSION=(?<currentValue>.*)"
             ],
@@ -77,67 +100,119 @@
                 "major"
             ],
             "automerge": true,
-            "matchPackagePatterns": ["paper-.*-builds"]
-        },
-        {
-            "matchPackagePatterns": ["^paper-minecraft$"],
-            "matchBaseBranches": ["/^mc\\/paper\\/1\\.20\\.1/"],
-            "allowedVersions": "<=1.20.1"
-        },
-        {
-            "matchPackagePatterns": ["^paper-minecraft$"],
-            "matchBaseBranches": ["/^mc\\/paper\\/1\\.20\\.2/"],
-            "allowedVersions": "<=1.20.2"
-        },
-        {
-            "matchPackagePatterns": ["^paper-minecraft$"],
-            "matchBaseBranches": ["/^mc\\/paper\\/1\\.20\\.4/"],
-            "allowedVersions": "<=1.20.4"
-        },
-        {
-            "matchDatasources": ["maven"],
-            "matchPackagePatterns": ["^net\\.fabricmc:fabric-.*$"],
-            "registryUrls": [
-                "https://maven.fabricmc.net/"
+            "matchPackageNames": [
+                "/paper-.*-builds/"
             ]
         },
         {
-            "matchPackagePatterns": ["^https:\\/\\/github.com\\/FabricMC\\/fabric$"],
-            "matchBaseBranches": ["/^mc\\/fabric\\/1\\.19\\.2/"],
-            "allowedVersions": "<=1.19.2"
+            "matchBaseBranches": [
+                "/^mc\\/paper\\/1\\.20\\.1/"
+            ],
+            "allowedVersions": "<=1.20.1",
+            "matchPackageNames": [
+                "/^paper-minecraft$/"
+            ]
         },
         {
-            "matchDatasources": ["maven"],
-            "matchPackagePatterns": ["^net\\.fabricmc:fabric-installer$"],
-            "matchBaseBranches": ["/^mc\\/fabric\\/1\\.19\\.2/"],
-            "allowedVersions": "<0.12.0"
+            "matchBaseBranches": [
+                "/^mc\\/paper\\/1\\.20\\.2/"
+            ],
+            "allowedVersions": "<=1.20.2",
+            "matchPackageNames": [
+                "/^paper-minecraft$/"
+            ]
         },
         {
-            "matchPackagePatterns": ["^https:\\/\\/github.com\\/FabricMC\\/fabric$"],
-            "matchBaseBranches": ["/^mc\\/fabric\\/1\\.20\\.1/"],
-            "allowedVersions": "<=1.20.1"
+            "matchBaseBranches": [
+                "/^mc\\/paper\\/1\\.20\\.4/"
+            ],
+            "allowedVersions": "<=1.20.4",
+            "matchPackageNames": [
+                "/^paper-minecraft$/"
+            ]
         },
         {
-            "matchDatasources": ["maven"],
-            "matchPackagePatterns": ["^net\\.fabricmc:fabric-installer$"],
-            "matchBaseBranches": ["/^mc\\/fabric\\/1\\.20\\.1/"],
-            "allowedVersions": "<0.12.0"
+            "matchDatasources": [
+                "maven"
+            ],
+            "registryUrls": [
+                "https://maven.fabricmc.net/"
+            ],
+            "matchPackageNames": [
+                "/^net\\.fabricmc:fabric-.*$/"
+            ]
         },
         {
-            "matchPackagePatterns": ["^https:\\/\\/github.com\\/FabricMC\\/fabric$"],
-            "matchBaseBranches": ["/^mc\\/fabric\\/1\\.20\\.2/"],
-            "allowedVersions": "<=1.20.2"
+            "matchBaseBranches": [
+                "/^mc\\/fabric\\/1\\.19\\.2/"
+            ],
+            "allowedVersions": "<=1.19.2",
+            "matchPackageNames": [
+                "/^https:\\/\\/github.com\\/FabricMC\\/fabric$/"
+            ]
         },
         {
-            "matchDatasources": ["maven"],
-            "matchPackagePatterns": ["^net\\.fabricmc:fabric-installer$"],
-            "matchBaseBranches": ["/^mc\\/fabric\\/1\\.20\\.2/"],
-            "allowedVersions": "<0.12.0"
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchBaseBranches": [
+                "/^mc\\/fabric\\/1\\.19\\.2/"
+            ],
+            "allowedVersions": "<0.12.0",
+            "matchPackageNames": [
+                "/^net\\.fabricmc:fabric-installer$/"
+            ]
         },
         {
-            "matchPackagePatterns": ["^https:\\/\\/github.com\\/FabricMC\\/fabric$"],
-            "matchBaseBranches": ["/^mc\\/fabric\\/1\\.20\\.3/"],
-            "allowedVersions": "<=1.20.3"
+            "matchBaseBranches": [
+                "/^mc\\/fabric\\/1\\.20\\.1/"
+            ],
+            "allowedVersions": "<=1.20.1",
+            "matchPackageNames": [
+                "/^https:\\/\\/github.com\\/FabricMC\\/fabric$/"
+            ]
+        },
+        {
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchBaseBranches": [
+                "/^mc\\/fabric\\/1\\.20\\.1/"
+            ],
+            "allowedVersions": "<0.12.0",
+            "matchPackageNames": [
+                "/^net\\.fabricmc:fabric-installer$/"
+            ]
+        },
+        {
+            "matchBaseBranches": [
+                "/^mc\\/fabric\\/1\\.20\\.2/"
+            ],
+            "allowedVersions": "<=1.20.2",
+            "matchPackageNames": [
+                "/^https:\\/\\/github.com\\/FabricMC\\/fabric$/"
+            ]
+        },
+        {
+            "matchDatasources": [
+                "maven"
+            ],
+            "matchBaseBranches": [
+                "/^mc\\/fabric\\/1\\.20\\.2/"
+            ],
+            "allowedVersions": "<0.12.0",
+            "matchPackageNames": [
+                "/^net\\.fabricmc:fabric-installer$/"
+            ]
+        },
+        {
+            "matchBaseBranches": [
+                "/^mc\\/fabric\\/1\\.20\\.3/"
+            ],
+            "allowedVersions": "<=1.20.3",
+            "matchPackageNames": [
+                "/^https:\\/\\/github.com\\/FabricMC\\/fabric$/"
+            ]
         }
     ]
 }
