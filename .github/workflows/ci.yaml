@@ -6,6 +6,7 @@ on:
     branches:
       - 'paper'
       - 'fabric'
+      - 'forge'
       - 'mc/*/*'
 
 jobs:
@@ -25,16 +26,20 @@ jobs:
       - name: Extract tags from branch
         id: extract_tags
         run: |
-          # Branches are either "paper", "fabric" or "mc/${variant}/${version}", for example "mc/paper/1.17.1" or "mc/fabric/1.20.1"
+          # Branches are either "paper", "fabric", "forge" or "mc/${variant}/${version}", for example "mc/paper/1.17.1", "mc/fabric/1.20.1" or "mc/forge/1.20.1"
           # If the branch is "mc/paper/1.17.1", MC_VARIANT will be "paper" and MC_VERSION will be "1.17.1"
           # If the branch is "fabric", MC_VARIANT will be "fabric" and MC_VERSION will be "latest"
           # If the branch is "paper", MC_VARIANT will be "paper" and MC_VERSION will be "latest"
+          # If the branch is "forge", MC_VARIANT will be "forge" and MC_VERSION will be "latest"
 
           if [ "${GITHUB_REF}" = "refs/heads/paper" ]; then
             MC_VARIANT="paper"
             MC_VERSION="latest"
           elif [ "${GITHUB_REF}" = "refs/heads/fabric" ]; then
             MC_VARIANT="fabric"
+            MC_VERSION="latest"
+          elif [ "${GITHUB_REF}" = "refs/heads/forge" ]; then
+            MC_VARIANT="forge"
             MC_VERSION="latest"
           else
             MC_VARIANT=$(echo $GITHUB_REF | sed -e 's/refs\/heads\/mc\///' -e 's/\/.*//')
@@ -53,6 +58,11 @@ jobs:
 
           if [ "$MC_VARIANT" = "papermc" && "${GITHUB_REF}" != "refs/heads/paper" ]; then
             TAGS="$TAGS,ghcr.io/usa-reddragon/$MC_VARIANT:$MC_VERSION-$(grep 'ARG PAPER_BUILD' Dockerfile | sed -e 's/ARG PAPER_BUILD=//')"
+          fi
+
+          if [ "$MC_VARIANT" = "forge" ] && [ "${GITHUB_REF}" != "refs/heads/forge" ]; then
+            # Forge versions already include the Minecraft version, e.g. "1.20.1-47.4.23"
+            TAGS="$TAGS,ghcr.io/usa-reddragon/$MC_VARIANT:$(grep 'ARG FORGE_VERSION' Dockerfile | sed -e 's/ARG FORGE_VERSION=//')"
           fi
           echo "TAGS=$TAGS" >> $GITHUB_OUTPUT
       - name: Build and push
