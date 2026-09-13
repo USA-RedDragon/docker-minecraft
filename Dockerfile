@@ -1,13 +1,10 @@
-FROM amazoncorretto:21.0.11-alpine@sha256:30b1b2246cee9a98c9bf8a11537a04f1eaf8c59279b0c70ae02d7e5b934edeaa
+FROM amazoncorretto:17.0.20-alpine@sha256:8aa46a55845b61ba079f8289556fcc1a7887cdf303d360bc27140ab38300d44e
 
-ARG PAPER_VERSION=1.20.4
-ARG PAPER_BUILD=499
-
-ENV PAPER_VERSION="${PAPER_VERSION}"
-ENV PAPER_BUILD="${PAPER_BUILD}"
+ARG FORGE_VERSION=1.20.1-47.4.23
+ENV FORGE_VERSION=${FORGE_VERSION}
 
 # Used in entrypoint
-ARG MC_VARIANT=paper
+ARG MC_VARIANT=forge
 ENV MC_VARIANT=${MC_VARIANT}
 
 WORKDIR /minecraft
@@ -22,18 +19,29 @@ SHELL [ "bash", "-c" ]
 
 RUN <<__DOCKER_EOF__
 set -eux
-SHA256=$(curl -fSsL https://api.papermc.io/v2/projects/paper/versions/${PAPER_VERSION}/builds | jq -r ".builds[] | select(.build==${PAPER_BUILD}).downloads.application.sha256")
+INSTALLER="forge-${FORGE_VERSION}-installer.jar"
+BASE_URL="https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}"
 
-curl -fSsL \
-  https://api.papermc.io/v2/projects/paper/versions/${PAPER_VERSION}/builds/${PAPER_BUILD}/downloads/paper-${PAPER_VERSION}-${PAPER_BUILD}.jar \
-  -o /paper-${PAPER_VERSION}-${PAPER_BUILD}.jar
+cd /tmp
+curl -fSsL "${BASE_URL}/${INSTALLER}" -o "${INSTALLER}"
+SHA256=$(curl -fSsL "${BASE_URL}/${INSTALLER}.sha256")
+echo "${SHA256}  ${INSTALLER}" | sha256sum -c
 
-echo "${SHA256}  /paper-${PAPER_VERSION}-${PAPER_BUILD}.jar" | sha256sum -c
+java -jar "${INSTALLER}" --installServer /forge
+rm -f "${INSTALLER}" "${INSTALLER}.log" /forge/run.bat
+
+# The generated argument file references libraries relative to the install
+# directory. Make them absolute so the server can run from /minecraft.
+ARGS_FILE="/forge/libraries/net/minecraftforge/forge/${FORGE_VERSION}/unix_args.txt"
+sed -i \
+  -e 's#libraries/#/forge/libraries/#g' \
+  -e 's#^-DlibraryDirectory=libraries$#-DlibraryDirectory=/forge/libraries#' \
+  "${ARGS_FILE}"
 __DOCKER_EOF__
 
 RUN addgroup -g 1000 minecraft
 RUN adduser -u 1000 -G minecraft -s /bin/sh -D minecraft
-RUN chown -R minecraft:minecraft /minecraft /paper-${PAPER_VERSION}-${PAPER_BUILD}.jar
+RUN chown -R minecraft:minecraft /minecraft /forge
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

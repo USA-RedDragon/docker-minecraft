@@ -17,6 +17,7 @@ if [ "${MC_VARIANT}" = "paper" ]; then
 elif [ "${MC_VARIANT}" = "fabric" ]; then
     LAUNCH_ARGS="-jar /fabric-${MC_VERSION}-${FABRIC_VERSION}-${INSTALLER_VERSION}.jar"
 elif [ "${MC_VARIANT}" = "forge" ]; then
+    # Forge is not a single jar; the installer generates a JVM argument file
     LAUNCH_ARGS="@/forge/libraries/net/minecraftforge/forge/${FORGE_VERSION}/unix_args.txt"
 else
     echo "Unknown variant: ${MC_VARIANT}"
