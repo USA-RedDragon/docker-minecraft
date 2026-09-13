@@ -1,28 +1,90 @@
-FROM amazoncorretto:17.0.20-alpine@sha256:8aa46a55845b61ba079f8289556fcc1a7887cdf303d360bc27140ab38300d44e
+# syntax=docker/dockerfile:1
 
-ARG FORGE_VERSION=1.20.1-47.4.23
-ENV FORGE_VERSION=${FORGE_VERSION}
+ARG JAVA_IMAGE=amazoncorretto:21.0.11-alpine@sha256:30b1b2246cee9a98c9bf8a11537a04f1eaf8c59279b0c70ae02d7e5b934edeaa
 
-# Used in entrypoint
-ARG MC_VARIANT=forge
-ENV MC_VARIANT=${MC_VARIANT}
-
-WORKDIR /minecraft
+FROM ${JAVA_IMAGE} AS base
 
 RUN apk add --no-cache \
   curl \
-  jq \
   nano \
   bash
 
 SHELL [ "bash", "-c" ]
 
+COPY --from=ghcr.io/srs-hosting/rcon:v0.0.5@sha256:effa0b6f89db5f4edd7904677fb1671a88d48a4c62a92f331edbd5a850e34cee /rcon /usr/bin/rcon
+COPY --chown=root:root rootfs/ /
+
+RUN addgroup -g 1000 minecraft \
+  && adduser -u 1000 -G minecraft -s /bin/sh -D minecraft
+
+WORKDIR /minecraft
+
+EXPOSE 25565
+
+ENV ACCEPT_EULA=false
+ENV EXTRA_JAVA_OPTS=""
+ENV MEMORY_OPTS="-Xms128M -Xmx1G"
+
+ENTRYPOINT [ "/entrypoint" ]
+
+FROM base AS paper
+
+ARG PAPER_VERSION
+ARG PAPER_BUILD
+
+ENV PAPER_VERSION="${PAPER_VERSION}"
+ENV PAPER_BUILD="${PAPER_BUILD}"
+
+ENV MC_VARIANT=paper
+
 RUN <<__DOCKER_EOF__
-set -eux
+set -euxo pipefail
+JAR="/paper-${PAPER_VERSION}-${PAPER_BUILD}.jar"
+USER_AGENT="USA-RedDragon/docker-minecraft (https://github.com/USA-RedDragon/docker-minecraft)"
+
+apk add --no-cache --virtual .paper-build jq
+
+BUILD=$(curl -fSsL -A "${USER_AGENT}" "https://fill.papermc.io/v3/projects/paper/versions/${PAPER_VERSION}/builds/${PAPER_BUILD}")
+URL=$(echo "${BUILD}" | jq -er '.downloads["server:default"].url')
+SHA256=$(echo "${BUILD}" | jq -er '.downloads["server:default"].checksums.sha256')
+
+curl -fSsL -A "${USER_AGENT}" "${URL}" -o "${JAR}"
+echo "${SHA256}  ${JAR}" | sha256sum -c
+
+apk del .paper-build
+__DOCKER_EOF__
+
+FROM base AS fabric
+
+ARG MC_VERSION
+ARG FABRIC_VERSION
+ARG INSTALLER_VERSION
+
+ENV MC_VERSION=${MC_VERSION}
+ENV FABRIC_VERSION=${FABRIC_VERSION}
+ENV INSTALLER_VERSION=${INSTALLER_VERSION}
+
+ENV MC_VARIANT=fabric
+
+RUN <<__DOCKER_EOF__
+set -euxo pipefail
+JAR="/fabric-${MC_VERSION}-${FABRIC_VERSION}-${INSTALLER_VERSION}.jar"
+
+curl -fSsL "https://meta.fabricmc.net/v2/versions/loader/${MC_VERSION}/${FABRIC_VERSION}/${INSTALLER_VERSION}/server/jar" -o "${JAR}"
+__DOCKER_EOF__
+
+FROM base AS forge
+
+ARG FORGE_VERSION
+ENV FORGE_VERSION=${FORGE_VERSION}
+
+ENV MC_VARIANT=forge
+
+RUN <<__DOCKER_EOF__
+set -euxo pipefail
 INSTALLER="forge-${FORGE_VERSION}-installer.jar"
 BASE_URL="https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}"
 
-cd /tmp
 curl -fSsL "${BASE_URL}/${INSTALLER}" -o "${INSTALLER}"
 SHA256=$(curl -fSsL "${BASE_URL}/${INSTALLER}.sha256")
 echo "${SHA256}  ${INSTALLER}" | sha256sum -c
@@ -37,21 +99,20 @@ sed -i \
   -e 's#libraries/#/forge/libraries/#g' \
   -e 's#^-DlibraryDirectory=libraries$#-DlibraryDirectory=/forge/libraries#' \
   "${ARGS_FILE}"
+
+SHIM="/forge/forge-${FORGE_VERSION}-shim.jar"
+if [ -f "${SHIM}" ]; then
+  MAIN=$(unzip -p "${SHIM}" bootstrap-shim.properties | tr -d '\r' | sed -n 's/^Main-Class=//p')
+  LAUNCH=$(unzip -p "${SHIM}" bootstrap-shim.properties | tr -d '\r' | sed -n 's/^Arguments=//p')
+  CLASSPATH=$(unzip -p "${SHIM}" bootstrap-shim.list | tr -d '\r' | cut -f3 | sed 's#^#/forge/libraries/#' | paste -sd: -)
+  sed -i "s# -jar forge-${FORGE_VERSION}-shim.jar# -cp ${CLASSPATH} ${MAIN} ${LAUNCH}#" "${ARGS_FILE}"
+fi
+
+MC_VERSION="${FORGE_VERSION%%-*}"
+SERVER_LIBS="/forge/libraries/net/minecraft/server"
+shopt -s nullglob
+rm -rf /tmp/* \
+  "${SERVER_LIBS}/${MC_VERSION}/server-${MC_VERSION}.jar" \
+  "${SERVER_LIBS}"/*/server-*-{bundled,unpacked,slim}.jar \
+  "${SERVER_LIBS}"/*/server-*-mappings.*
 __DOCKER_EOF__
-
-RUN addgroup -g 1000 minecraft
-RUN adduser -u 1000 -G minecraft -s /bin/sh -D minecraft
-RUN chown -R minecraft:minecraft /minecraft /forge
-
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-EXPOSE 25565
-
-ENV ACCEPT_EULA=false
-ENV EXTRA_JAVA_OPTS=""
-ENV MEMORY_OPTS="-Xms128M -Xmx1G"
-
-USER minecraft
-
-ENTRYPOINT /entrypoint.sh

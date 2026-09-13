@@ -1,0 +1,7 @@
+#!/bin/sh
+
+PORT=$(sed -n 's/^server-port=//p' /minecraft/server.properties 2>/dev/null)
+
+for port in "${PORT:-25565}" "${RCON_PORT:-25575}"; do
+    grep -qE ":$(printf %04X "${port}") [0-9A-F]+:0000 0A " /proc/net/tcp /proc/net/tcp6 || exit 1
+done

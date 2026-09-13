@@ -1,0 +1,74 @@
+#!/bin/sh
+
+WAIT=600
+MARKS="$(seq "${WAIT}" -60 60) 45 30 15 10 5 4 3 2 1"
+
+PREFIX=""
+if [ "${MC_VARIANT}" = "paper" ]; then
+    PREFIX="minecraft:"
+fi
+
+mc() {
+    rcon -a "127.0.0.1:${RCON_PORT:-25575}" "$@"
+}
+
+players() {
+    mc "${PREFIX}list" | sed -n 's/^There are [0-9]* of a max of [0-9]* players online: *//p' | tr -d ','
+}
+
+announce() {
+    if [ "$1" -ge 60 ]; then
+        COUNT=$(( $1 / 60 ))
+        UNIT="minute"
+    else
+        COUNT=$1
+        UNIT="second"
+    fi
+    if [ "${COUNT}" -ne 1 ]; then
+        UNIT="${UNIT}s"
+    fi
+    mc "${PREFIX}tellraw @a \"Server restart in ${COUNT} ${UNIT}...\"" > /dev/null
+}
+
+if ! mc "${PREFIX}list" > /dev/null; then
+    echo "preStop: RCON failed, shutting down now" >&2
+    exit 1
+fi
+
+STAYING=$(players)
+DEADLINE=$(( $(date +%s) + WAIT ))
+
+while [ -n "${STAYING}" ]; do
+    REMAINING=$(( DEADLINE - $(date +%s) ))
+    if [ "${REMAINING}" -le 0 ]; then
+        break
+    fi
+
+    ANNOUNCE=""
+    PENDING=""
+    for mark in ${MARKS}; do
+        if [ "${mark}" -ge "${REMAINING}" ]; then
+            ANNOUNCE=${mark}
+        else
+            PENDING="${PENDING} ${mark}"
+        fi
+    done
+    MARKS=${PENDING}
+    if [ -n "${ANNOUNCE}" ] && [ $(( ANNOUNCE - REMAINING )) -le 1 ]; then
+        announce "${ANNOUNCE}"
+    fi
+
+    STILL=""
+    for player in $(players); do
+        case " ${STAYING} " in
+            *" ${player} "*) STILL="${STILL} ${player}" ;;
+            *) mc "${PREFIX}kick ${player} Server is restarting" > /dev/null ;;
+        esac
+    done
+    STAYING=${STILL}
+
+    sleep 1
+done
+
+mc "${PREFIX}kick @a Server is restarting" > /dev/null
+mc --timeoutSeconds 300 "${PREFIX}save-all flush"

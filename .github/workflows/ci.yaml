@@ -4,72 +4,81 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - 'paper'
-      - 'fabric'
-      - 'forge'
-      - 'mc/*/*'
+      - 'main'
+  pull_request:
+    branches:
+      - 'main'
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  docker:
+  plan:
     runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.targets.outputs.targets }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+      - name: Find targets to build
+        id: targets
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+        run: echo "targets=$(.github/scripts/changed-targets.sh "${BASE}")" >> "${GITHUB_OUTPUT}"
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.targets != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.plan.outputs.targets) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+      - name: Build
+        uses: docker/bake-action@d3418bd7d0e9324001bca92fa8ba175ea7e6dc9b # v7.3.0
+        with:
+          source: .
+          targets: ${{ matrix.target }}
+          load: true
+      - name: Smoke test
+        env:
+          TARGET: ${{ matrix.target }}
+        run: .github/scripts/smoke-test.sh "$(docker buildx bake --progress=quiet --print "${TARGET}" | jq -r '.target[].tags[0]')"
       - name: Log in to GHCR
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Extract tags from branch
-        id: extract_tags
-        run: |
-          # Branches are either "paper", "fabric", "forge" or "mc/${variant}/${version}", for example "mc/paper/1.17.1", "mc/fabric/1.20.1" or "mc/forge/1.20.1"
-          # If the branch is "mc/paper/1.17.1", MC_VARIANT will be "paper" and MC_VERSION will be "1.17.1"
-          # If the branch is "fabric", MC_VARIANT will be "fabric" and MC_VERSION will be "latest"
-          # If the branch is "paper", MC_VARIANT will be "paper" and MC_VERSION will be "latest"
-          # If the branch is "forge", MC_VARIANT will be "forge" and MC_VERSION will be "latest"
-
-          if [ "${GITHUB_REF}" = "refs/heads/paper" ]; then
-            MC_VARIANT="paper"
-            MC_VERSION="latest"
-          elif [ "${GITHUB_REF}" = "refs/heads/fabric" ]; then
-            MC_VARIANT="fabric"
-            MC_VERSION="latest"
-          elif [ "${GITHUB_REF}" = "refs/heads/forge" ]; then
-            MC_VARIANT="forge"
-            MC_VERSION="latest"
-          else
-            MC_VARIANT=$(echo $GITHUB_REF | sed -e 's/refs\/heads\/mc\///' -e 's/\/.*//')
-            MC_VERSION=$(echo $GITHUB_REF | sed -e 's/refs\/heads\/mc\///' -e 's/.*\///')
-          fi
-
-          if [ "$MC_VARIANT" = "paper" ]; then
-            MC_VARIANT="papermc"
-          fi
-
-          TAGS="ghcr.io/usa-reddragon/$MC_VARIANT:$MC_VERSION"
-
-          if [ "${GITHUB_REF}" != "refs/heads/paper" && "${GITHUB_REF}" != "refs/heads/fabric" ]; then
-            TAGS="$TAGS,ghcr.io/usa-reddragon/$MC_VARIANT:$MC_VERSION"
-          fi
-
-          if [ "$MC_VARIANT" = "papermc" && "${GITHUB_REF}" != "refs/heads/paper" ]; then
-            TAGS="$TAGS,ghcr.io/usa-reddragon/$MC_VARIANT:$MC_VERSION-$(grep 'ARG PAPER_BUILD' Dockerfile | sed -e 's/ARG PAPER_BUILD=//')"
-          fi
-
-          if [ "$MC_VARIANT" = "forge" ] && [ "${GITHUB_REF}" != "refs/heads/forge" ]; then
-            # Forge versions already include the Minecraft version, e.g. "1.20.1-47.4.23"
-            TAGS="$TAGS,ghcr.io/usa-reddragon/$MC_VARIANT:$(grep 'ARG FORGE_VERSION' Dockerfile | sed -e 's/ARG FORGE_VERSION=//')"
-          fi
-          echo "TAGS=$TAGS" >> $GITHUB_OUTPUT
-      - name: Build and push
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+      - name: Push
+        if: github.event_name != 'pull_request'
+        uses: docker/bake-action@d3418bd7d0e9324001bca92fa8ba175ea7e6dc9b # v7.3.0
         with:
+          source: .
+          targets: ${{ matrix.target }}
           push: true
           provenance: mode=max
           sbom: true
-          file: ./Dockerfile
-          tags: ${{ steps.extract_tags.outputs.TAGS }}
+
+  docker:
+    needs: [plan, build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check build results
+        env:
+          PLAN: ${{ needs.plan.result }}
+          BUILD: ${{ needs.build.result }}
+        run: |
+          [ "${PLAN}" = success ] && { [ "${BUILD}" = success ] || [ "${BUILD}" = skipped ]; }

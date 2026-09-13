@@ -3,163 +3,105 @@
     "extends": [
         "local>USA-RedDragon/renovate-configs"
     ],
-    "baseBranches": ["fabric","paper","forge","/^mc\\/.*\\/.*/"],
-    "regexManagers": [
+    "customManagers": [
         {
-            "fileMatch": ["(^|/)Dockerfile$"],
-            "matchStrings": ["ARG PAPER_VERSION=(?<currentValue>.*)"],
-            "depNameTemplate": "paper-minecraft",
-            "versioningTemplate": "semver-coerced",
-            "datasourceTemplate": "custom.paper-minecraft"
-        },
-        {
-            "fileMatch": ["(^|/)Dockerfile$"],
-            "matchStrings": ["ARG PAPER_VERSION=(?<mcVersion>.*)\\nARG PAPER_BUILD=(?<currentValue>.*)"],
-            "depNameTemplate": "paper-{{{mcVersion}}}-builds",
-            "versioningTemplate": "loose",
-            "datasourceTemplate": "custom.paper-{{{mcVersion}}}-builds"
-        },
-        {
-            "fileMatch": ["(^|/)Dockerfile$"],
+            "customType": "regex",
+            "description": "Java base image overrides",
+            "managerFilePatterns": ["/(^|/)docker-bake\\.hcl$/"],
             "matchStrings": [
-                "ARG FABRIC_VERSION=(?<currentValue>.*)"
+                "\"(?<depName>amazoncorretto):(?<currentValue>[^@\"]+)@(?<currentDigest>sha256:[a-f0-9]{64})\""
+            ],
+            "datasourceTemplate": "docker",
+            "autoReplaceStringTemplate": "\"{{depName}}:{{newValue}}{{#if newDigest}}@{{newDigest}}{{/if}}\""
+        },
+        {
+            "customType": "regex",
+            "description": "Paper build for each Minecraft version",
+            "managerFilePatterns": ["/(^|/)docker-bake\\.hcl$/"],
+            "matchStrings": [
+                "mc\\s*=\\s*\"(?<packageName>[^\"]+)\",\\s*build\\s*=\\s*\"(?<currentValue>\\d+)\""
+            ],
+            "datasourceTemplate": "custom.paper-builds",
+            "depNameTemplate": "paper-{{{packageName}}}",
+            "versioningTemplate": "loose"
+        },
+        {
+            "customType": "regex",
+            "description": "Fabric loader",
+            "managerFilePatterns": ["/(^|/)docker-bake\\.hcl$/"],
+            "matchStrings": [
+                "variable \"FABRIC_LOADER_VERSION\" \\{\\s*default\\s*=\\s*\"(?<currentValue>[^\"]+)\""
             ],
             "datasourceTemplate": "maven",
-            "depNameTemplate": "net.fabricmc:fabric-loader"
+            "depNameTemplate": "net.fabricmc:fabric-loader",
+            "registryUrlTemplate": "https://maven.fabricmc.net/"
         },
         {
-            "fileMatch": ["(^|/)Dockerfile$"],
+            "customType": "regex",
+            "description": "Fabric installer",
+            "managerFilePatterns": ["/(^|/)docker-bake\\.hcl$/"],
             "matchStrings": [
-                "ARG INSTALLER_VERSION=(?<currentValue>.*)"
+                "variable \"FABRIC_(?:LEGACY_)?INSTALLER_VERSION\" \\{\\s*default\\s*=\\s*\"(?<currentValue>[^\"]+)\""
             ],
             "datasourceTemplate": "maven",
-            "depNameTemplate": "net.fabricmc:fabric-installer"
+            "depNameTemplate": "net.fabricmc:fabric-installer",
+            "registryUrlTemplate": "https://maven.fabricmc.net/"
         },
         {
-            "fileMatch": ["(^|/)Dockerfile$"],
+            "customType": "regex",
+            "description": "Recommended Forge release for each Minecraft version",
+            "managerFilePatterns": ["/(^|/)docker-bake\\.hcl$/"],
             "matchStrings": [
-                "ARG MC_VERSION=(?<currentValue>.*)"
+                "forge\\s*=\\s*\"(?<packageName>[^-\"]+)-(?<currentValue>[^\"]+)\""
             ],
-            "datasourceTemplate": "git-refs",
-            "packageNameTemplate": "https://github.com/FabricMC/fabric",
-            "depNameTemplate": "https://github.com/FabricMC/fabric"
-        },
-        {
-            "fileMatch": ["(^|/)Dockerfile$"],
-            "matchStrings": [
-                "ARG FORGE_VERSION=(?<currentValue>.*)"
-            ],
-            "datasourceTemplate": "maven",
-            "depNameTemplate": "net.minecraftforge:forge",
-            "versioningTemplate": "regex:^(?<compatibility>\\d+\\.\\d+(?:\\.\\d+)?)-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:\\.(?<build>\\d+))?$"
+            "datasourceTemplate": "custom.forge-recommended",
+            "depNameTemplate": "forge-{{{packageName}}}",
+            "versioningTemplate": "semver-coerced"
         }
     ],
     "customDatasources": {
-        "paper-minecraft": {
-            "defaultRegistryUrlTemplate": "https://api.papermc.io/v2/projects/paper",
+        "paper-builds": {
+            "defaultRegistryUrlTemplate": "https://fill.papermc.io/v3/projects/paper/versions/{{packageName}}/builds",
             "transformTemplates": [
-                "{\"releases\":[{\"version\": $$.versions[-1],\"sourceUrl\":\"https://github.com/PaperMC/Paper\",\"changelogUrl\":\"https://papermc.io/downloads/all\"}],\"sourceUrl\": \"https://github.com/PaperMC/Paper\",\"homepage\": \"https://papermc.io\"}"
+                "{\"releases\": [$$[channel=\"STABLE\"].{\"version\": $string(id)}], \"sourceUrl\": \"https://github.com/PaperMC/Paper\", \"homepage\": \"https://papermc.io\"}"
             ]
         },
-        "paper-1.20.1-builds": {
-            "defaultRegistryUrlTemplate": "https://api.papermc.io/v2/projects/paper/versions/1.20.1/builds",
+        "forge-recommended": {
+            "defaultRegistryUrlTemplate": "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json?mc={{packageName}}",
             "transformTemplates": [
-                "{\"releases\":[{\"version\": $string($$.builds[-1].build),\"sourceUrl\":\"https://github.com/PaperMC/Paper\",\"changelogUrl\":\"https://papermc.io/downloads/all\"}],\"sourceUrl\": \"https://github.com/PaperMC/Paper\",\"homepage\": \"https://papermc.io\"}"
-            ]
-        },
-        "paper-1.20.2-builds": {
-            "defaultRegistryUrlTemplate": "https://api.papermc.io/v2/projects/paper/versions/1.20.2/builds",
-            "transformTemplates": [
-                "{\"releases\":[{\"version\": $string($$.builds[-1].build),\"sourceUrl\":\"https://github.com/PaperMC/Paper\",\"changelogUrl\":\"https://papermc.io/downloads/all\"}],\"sourceUrl\": \"https://github.com/PaperMC/Paper\",\"homepage\": \"https://papermc.io\"}"
-            ]
-        },
-        "paper-1.20.4-builds": {
-            "defaultRegistryUrlTemplate": "https://api.papermc.io/v2/projects/paper/versions/1.20.4/builds",
-            "transformTemplates": [
-                "{\"releases\":[{\"version\": $string($$.builds[-1].build),\"sourceUrl\":\"https://github.com/PaperMC/Paper\",\"changelogUrl\":\"https://papermc.io/downloads/all\"}],\"sourceUrl\": \"https://github.com/PaperMC/Paper\",\"homepage\": \"https://papermc.io\"}"
+                "{\"releases\": [{\"version\": $lookup(promos, \"{{packageName}}-recommended\")}], \"sourceUrl\": \"https://github.com/MinecraftForge/MinecraftForge\", \"homepage\": \"https://files.minecraftforge.net\"}"
             ]
         }
     },
     "packageRules": [
         {
-            "matchUpdateTypes": [
-                "major"
-            ],
-            "automerge": true,
-            "matchPackagePatterns": ["paper-.*-builds"]
+            "matchDatasources": ["custom.paper-builds"],
+            "matchUpdateTypes": ["major"],
+            "automerge": true
         },
         {
-            "matchPackagePatterns": ["^paper-minecraft$"],
-            "matchBaseBranches": ["/^mc\\/paper\\/1\\.20\\.1/"],
-            "allowedVersions": "<=1.20.1"
-        },
-        {
-            "matchPackagePatterns": ["^paper-minecraft$"],
-            "matchBaseBranches": ["/^mc\\/paper\\/1\\.20\\.2/"],
-            "allowedVersions": "<=1.20.2"
-        },
-        {
-            "matchPackagePatterns": ["^paper-minecraft$"],
-            "matchBaseBranches": ["/^mc\\/paper\\/1\\.20\\.4/"],
-            "allowedVersions": "<=1.20.4"
-        },
-        {
-            "matchDatasources": ["maven"],
-            "matchPackagePatterns": ["^net\\.fabricmc:fabric-.*$"],
-            "registryUrls": [
-                "https://maven.fabricmc.net/"
-            ]
-        },
-        {
-            "matchPackagePatterns": ["^https:\\/\\/github.com\\/FabricMC\\/fabric$"],
-            "matchBaseBranches": ["/^mc\\/fabric\\/1\\.19\\.2/"],
-            "allowedVersions": "<=1.19.2"
-        },
-        {
-            "matchDatasources": ["maven"],
-            "matchPackagePatterns": ["^net\\.fabricmc:fabric-installer$"],
-            "matchBaseBranches": ["/^mc\\/fabric\\/1\\.19\\.2/"],
-            "allowedVersions": "<0.12.0"
-        },
-        {
-            "matchPackagePatterns": ["^https:\\/\\/github.com\\/FabricMC\\/fabric$"],
-            "matchBaseBranches": ["/^mc\\/fabric\\/1\\.20\\.1/"],
-            "allowedVersions": "<=1.20.1"
-        },
-        {
-            "matchDatasources": ["maven"],
-            "matchPackagePatterns": ["^net\\.fabricmc:fabric-installer$"],
-            "matchBaseBranches": ["/^mc\\/fabric\\/1\\.20\\.1/"],
-            "allowedVersions": "<0.12.0"
-        },
-        {
-            "matchPackagePatterns": ["^https:\\/\\/github.com\\/FabricMC\\/fabric$"],
-            "matchBaseBranches": ["/^mc\\/fabric\\/1\\.20\\.2/"],
-            "allowedVersions": "<=1.20.2"
-        },
-        {
-            "matchDatasources": ["maven"],
-            "matchPackagePatterns": ["^net\\.fabricmc:fabric-installer$"],
-            "matchBaseBranches": ["/^mc\\/fabric\\/1\\.20\\.2/"],
-            "allowedVersions": "<0.12.0"
-        },
-        {
-            "matchPackagePatterns": ["^https:\\/\\/github.com\\/FabricMC\\/fabric$"],
-            "matchBaseBranches": ["/^mc\\/fabric\\/1\\.20\\.3/"],
-            "allowedVersions": "<=1.20.3"
-        },
-        {
-            "matchDatasources": ["maven"],
-            "matchPackagePatterns": ["^net\\.minecraftforge:forge$"],
-            "registryUrls": [
-                "https://maven.minecraftforge.net/"
-            ]
+            "description": "Minecraft 1.19.2 - 1.20.2 are held on the 0.11 Fabric installer",
+            "matchPackageNames": ["net.fabricmc:fabric-installer"],
+            "matchCurrentVersion": "/^0\\./",
+            "allowedVersions": "/^0\\./"
         },
         {
             "matchDatasources": ["docker"],
-            "matchPackagePatterns": ["^amazoncorretto$"],
-            "matchBaseBranches": ["forge", "/^mc\\/forge\\/1\\.20\\.1/"],
+            "matchPackageNames": ["amazoncorretto"],
+            "matchCurrentVersion": "/^17\\./",
             "allowedVersions": "/^17\\./"
+        },
+        {
+            "matchDatasources": ["docker"],
+            "matchPackageNames": ["amazoncorretto"],
+            "matchCurrentVersion": "/^21\\./",
+            "allowedVersions": "/^21\\./"
+        },
+        {
+            "matchDatasources": ["docker"],
+            "matchPackageNames": ["amazoncorretto"],
+            "matchCurrentVersion": "/^25\\./",
+            "allowedVersions": "/^25\\./"
         }
     ]
 }

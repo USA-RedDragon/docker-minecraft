@@ -3,9 +3,25 @@
 trap "exit" INT TERM ERR
 trap "kill 0" EXIT
 
+if [ -z "${RCON_PASSWORD:-}" ]; then
+    echo "Error: RCON_PASSWORD environment variable is not set."
+    exit 1
+fi
+
 if [ "${ACCEPT_EULA}" = "true" ]; then
     echo "eula=true" > /minecraft/eula.txt
 fi
+
+set_property() {
+    touch /minecraft/server.properties
+    grep -v "^$1=" /minecraft/server.properties > /minecraft/server.properties.tmp || true
+    printf '%s=%s\n' "$1" "$(printf '%s' "$2" | sed 's/\\/\\\\/g')" >> /minecraft/server.properties.tmp
+    mv /minecraft/server.properties.tmp /minecraft/server.properties
+}
+
+set_property enable-rcon true
+set_property rcon.port "${RCON_PORT:-25575}"
+set_property rcon.password "${RCON_PASSWORD}"
 
 MEMORY_OPTS=${MEMORY_OPTS:-"-Xms128M -Xmx1G"}
 
@@ -17,7 +33,6 @@ if [ "${MC_VARIANT}" = "paper" ]; then
 elif [ "${MC_VARIANT}" = "fabric" ]; then
     LAUNCH_ARGS="-jar /fabric-${MC_VERSION}-${FABRIC_VERSION}-${INSTALLER_VERSION}.jar"
 elif [ "${MC_VARIANT}" = "forge" ]; then
-    # Forge is not a single jar; the installer generates a JVM argument file
     LAUNCH_ARGS="@/forge/libraries/net/minecraftforge/forge/${FORGE_VERSION}/unix_args.txt"
 else
     echo "Unknown variant: ${MC_VARIANT}"
