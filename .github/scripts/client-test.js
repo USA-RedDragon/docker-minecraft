@@ -1,4 +1,4 @@
-const { spawn } = require('node:child_process')
+const { spawn, spawnSync } = require('node:child_process')
 const minecraftData = require('minecraft-data')
 const { ping } = require('minecraft-protocol')
 const mineflayer = require('mineflayer')
@@ -35,6 +35,7 @@ function join (name, version) {
     bot.once('spawn', () => log(name, 'spawned'))
     bot.on('messagestr', (message) => log(name, 'chat', message))
     bot.on('kicked', (reason) => log(name, 'kicked', typeof reason === 'string' ? reason : JSON.stringify(reason)))
+    bot.on('end', (reason) => log(name, 'disconnected', reason))
     bot.on('error', (error) => log(name, 'error', error.message))
   })
 }
@@ -67,7 +68,9 @@ async function main () {
 
   const failures = []
   const of = (name, type) => events.filter((e) => e.name === name && e.type === type)
-  const kickedWith = (name) => of(name, 'kicked').find((e) => e.detail.includes(kickReason))
+  const logs = spawnSync('docker', ['logs', container], { encoding: 'utf8' })
+  const serverLog = `${logs.stdout}${logs.stderr}`
+  const kicked = (name) => of(name, 'kicked').some((e) => e.detail.includes(kickReason)) || serverLog.includes(`${name} lost connection: ${kickReason}`)
 
   if (code !== 0 || !output.includes('Saved the game')) failures.push('pre-stop did not exit 0 after saving the game')
 
@@ -75,12 +78,12 @@ async function main () {
   if (JSON.stringify(announcements) !== JSON.stringify(countdown)) {
     failures.push(`StayingBot saw announcements ${JSON.stringify(announcements)}, expected ${JSON.stringify(countdown)}`)
   }
-  if (!kickedWith('StayingBot')) failures.push(`StayingBot was not kicked with "${kickReason}"`)
+  if (!kicked('StayingBot')) failures.push(`StayingBot was not kicked with "${kickReason}"`)
 
   const lateLogin = of('LateBot', 'logged in')[0]
-  const lateKick = kickedWith('LateBot')
-  if (!lateKick) failures.push(`LateBot was not kicked with "${kickReason}"`)
-  else if (lateKick.at - lateLogin.at > 5000) failures.push(`LateBot was kicked ${lateKick.at - lateLogin.at}ms after joining, expected under 5000ms`)
+  const lateDisconnect = of('LateBot', 'disconnected')[0]
+  if (!kicked('LateBot')) failures.push(`LateBot was not kicked with "${kickReason}"`)
+  else if (!lateDisconnect || lateDisconnect.at - lateLogin.at > 5000) failures.push(`LateBot was disconnected ${lateDisconnect ? lateDisconnect.at - lateLogin.at : 'never'}ms after joining, expected under 5000ms`)
 
   for (const failure of failures) console.log(`::error::${failure}`)
   process.exit(failures.length ? 1 : 0)

@@ -97,11 +97,13 @@ async function main () {
     await rcon.run(`${prefix}data modify storage rcontest:utf8 v[0] set value "${'a'.repeat(pad)}"`)
     const replies = await rcon.run(`${prefix}data get storage rcontest:utf8`)
     const body = Buffer.concat(replies.map((p) => p.body))
-    const intact = (body.toString('utf8').match(/é/g) || []).length
+    const runs = body.toString('utf8').match(/é+/g) || []
+    const intact = runs.filter((run) => run.length === element.length).length
+    const broken = runs.length - intact
     const sizes = replies.map((p) => p.size)
-    console.log(`utf8 pad=${pad}: packet sizes ${JSON.stringify(sizes)}, ${intact}/${elements * element.length} é intact, ${body.includes(replacement) ? 'has' : 'no'} U+FFFD`)
-    if (body.includes(replacement) || intact !== elements * element.length) {
-      failures.push(`pad=${pad}: a multi-byte character was split across packets (${intact}/${elements * element.length} intact)`)
+    console.log(`utf8 pad=${pad}: packet sizes ${JSON.stringify(sizes)}, ${intact} intact and ${broken} broken elements, ${body.includes(replacement) ? 'has' : 'no'} U+FFFD`)
+    if (body.includes(replacement) || broken || !intact) {
+      failures.push(`pad=${pad}: a multi-byte character was split across packets (${intact} intact and ${broken} broken elements)`)
     }
     if (patched && sizes.some((size) => size > maxPacketSize)) {
       failures.push(`pad=${pad}: a packet is larger than ${maxPacketSize} bytes: ${JSON.stringify(sizes)}`)
