@@ -16,6 +16,9 @@ permissions:
 jobs:
   plan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     outputs:
       targets: ${{ steps.targets.outputs.targets }}
     steps:
@@ -87,6 +90,55 @@ jobs:
           push: true
           provenance: mode=max
           sbom: true
+
+  readme:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      AUTO_COMMIT_APP_ID: ${{ vars.AUTO_COMMIT_APP_ID }}
+    steps:
+      - name: Generate GitHub App Token
+        if: env.AUTO_COMMIT_APP_ID != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.AUTO_COMMIT_APP_ID }}
+          private-key: ${{ secrets.AUTO_COMMIT_APP_KEY }}
+      - name: Name the committer
+        if: steps.app-token.outputs.token != ''
+        id: committer
+        env:
+          SLUG: ${{ steps.app-token.outputs.app-slug }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          name="${SLUG}[bot]"
+          id=$(gh api "/users/${SLUG}%5Bbot%5D" --jq .id)
+          {
+            echo "name=${name}"
+            echo "email=${id}+${name}@users.noreply.github.com"
+          } >> "${GITHUB_OUTPUT}"
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.head_ref || github.ref_name }}
+          token: ${{ steps.app-token.outputs.token || github.token }}
+      - name: Update version tables
+        run: .github/scripts/versions.sh README.md
+      - name: Commit
+        if: steps.app-token.outputs.token != ''
+        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
+        with:
+          file_pattern: README.md
+          commit_message: 'docs: update version tables'
+          commit_user_name: ${{ steps.committer.outputs.name }}
+          commit_user_email: ${{ steps.committer.outputs.email }}
+          commit_author: ${{ steps.committer.outputs.name }} <${{ steps.committer.outputs.email }}>
+      - name: Check version tables
+        if: steps.app-token.outputs.token == ''
+        run: git diff --exit-code README.md || { echo "::error::README.md is out of date, run .github/scripts/versions.sh"; exit 1; }
 
   docker:
     needs: [plan, build]
