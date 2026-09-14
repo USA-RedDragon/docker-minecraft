@@ -1,0 +1,7 @@
+{
+  "name": "docker-minecraft-client-test",
+  "private": true,
+  "dependencies": {
+    "mineflayer": "4.39.0"
+  }
+}
