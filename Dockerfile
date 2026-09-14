@@ -27,6 +27,24 @@ ENV MEMORY_OPTS="-Xms128M -Xmx1G"
 
 ENTRYPOINT [ "/entrypoint" ]
 
+FROM base AS rcon-fix
+
+ARG ASM_VERSION=9.10.1
+
+WORKDIR /rcon-fix
+
+COPY rcon-fix/ /rcon-fix/src/
+
+RUN <<__DOCKER_EOF__
+set -euxo pipefail
+for ARTIFACT in asm asm-tree; do
+  URL="https://repo1.maven.org/maven2/org/ow2/asm/${ARTIFACT}/${ASM_VERSION}/${ARTIFACT}-${ASM_VERSION}.jar"
+  curl -fSsL "${URL}" -o "${ARTIFACT}.jar"
+  echo "$(curl -fSsL "${URL}.sha256")  ${ARTIFACT}.jar" | sha256sum -c
+done
+javac --release 17 -g:none -cp asm.jar:asm-tree.jar -d classes $(find src -name '*.java')
+__DOCKER_EOF__
+
 FROM base AS paper
 
 ARG PAPER_VERSION
@@ -80,7 +98,7 @@ ENV FORGE_VERSION=${FORGE_VERSION}
 
 ENV MC_VARIANT=forge
 
-RUN <<__DOCKER_EOF__
+RUN --mount=type=bind,from=rcon-fix,source=/rcon-fix,target=/rcon-fix <<__DOCKER_EOF__
 set -euxo pipefail
 INSTALLER="forge-${FORGE_VERSION}-installer.jar"
 BASE_URL="https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}"
@@ -115,6 +133,8 @@ rm -rf /tmp/* \
   "${SERVER_LIBS}/${MC_VERSION}/server-${MC_VERSION}.jar" \
   "${SERVER_LIBS}"/*/server-*-{bundled,unpacked,slim}.jar \
   "${SERVER_LIBS}"/*/server-*-mappings.*
+
+java -cp /rcon-fix/classes:/rcon-fix/asm.jar:/rcon-fix/asm-tree.jar rconfix.RconFix $(find /forge -name '*.jar')
 __DOCKER_EOF__
 
 FROM base AS neoforge
@@ -143,8 +163,11 @@ sed -i \
   "${ARGS_FILE}"
 
 SERVER_LIBS="/neoforge/libraries/net/minecraft/server"
-shopt -s nullglob
+shopt -s nullglob extglob
 rm -rf /tmp/* \
-  "${SERVER_LIBS}"/*/server-*.jar \
+  "${SERVER_LIBS}"/*/server-+([0-9.]).jar \
+  "${SERVER_LIBS}"/*/server-*-{bundled,unpacked,slim}.jar \
   "${SERVER_LIBS}"/*/server-*-mappings.*
+
+java -cp /rcon-fix/classes:/rcon-fix/asm.jar:/rcon-fix/asm-tree.jar rconfix.RconFix $(find /neoforge -name '*.jar')
 __DOCKER_EOF__
