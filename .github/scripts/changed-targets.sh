@@ -20,7 +20,9 @@ if [ -z "${base}" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
 fi
 
 # Anything shared by every image changed: build everything
-if ! git diff --quiet "${base}" -- Dockerfile .dockerignore rootfs; then
+if ! git diff --quiet "${base}" -- Dockerfile .dockerignore rootfs rcon-fix \
+  .github/scripts/smoke-test.sh .github/scripts/client-test.js .github/scripts/rcon-test.js \
+  .github/scripts/package.json .github/scripts/package-lock.json; then
   jq -c 'keys' <<< "${head}"
   exit 0
 fi

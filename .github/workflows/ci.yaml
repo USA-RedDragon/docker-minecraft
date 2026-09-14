@@ -28,8 +28,17 @@ jobs:
       - name: Find targets to build
         id: targets
         env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
-        run: echo "targets=$(.github/scripts/changed-targets.sh "${BASE}")" >> "${GITHUB_OUTPUT}"
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          case "${EVENT}" in
+            pull_request) base=${PR_BASE} ;;
+            push) base=$(gh run list --workflow ci.yaml --branch main --status success --limit 1 --json headSha --jq '.[0].headSha // ""') ;;
+            *) base="" ;;
+          esac
+          echo "targets=$(.github/scripts/changed-targets.sh "${base}")" >> "${GITHUB_OUTPUT}"
 
   build:
     needs: plan
