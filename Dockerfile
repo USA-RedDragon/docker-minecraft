@@ -39,8 +39,8 @@ RUN <<__DOCKER_EOF__
 set -euxo pipefail
 for ARTIFACT in asm asm-tree; do
   URL="https://repo1.maven.org/maven2/org/ow2/asm/${ARTIFACT}/${ASM_VERSION}/${ARTIFACT}-${ASM_VERSION}.jar"
-  curl -fSsL "${URL}" -o "${ARTIFACT}.jar"
-  echo "$(curl -fSsL "${URL}.sha256")  ${ARTIFACT}.jar" | sha256sum -c
+  curl -fSsL --retry 5 --retry-all-errors "${URL}" -o "${ARTIFACT}.jar"
+  echo "$(curl -fSsL --retry 5 --retry-all-errors "${URL}.sha256")  ${ARTIFACT}.jar" | sha256sum -c
 done
 javac --release 17 -g:none -cp asm.jar:asm-tree.jar -d classes $(find src -name '*.java')
 __DOCKER_EOF__
@@ -62,11 +62,11 @@ USER_AGENT="USA-RedDragon/docker-minecraft (https://github.com/USA-RedDragon/doc
 
 apk add --no-cache --virtual .paper-build jq
 
-BUILD=$(curl -fSsL -A "${USER_AGENT}" "https://fill.papermc.io/v3/projects/paper/versions/${PAPER_VERSION}/builds/${PAPER_BUILD}")
+BUILD=$(curl -fSsL --retry 5 --retry-all-errors -A "${USER_AGENT}" "https://fill.papermc.io/v3/projects/paper/versions/${PAPER_VERSION}/builds/${PAPER_BUILD}")
 URL=$(echo "${BUILD}" | jq -er '.downloads["server:default"].url')
 SHA256=$(echo "${BUILD}" | jq -er '.downloads["server:default"].checksums.sha256')
 
-curl -fSsL -A "${USER_AGENT}" "${URL}" -o "${JAR}"
+curl -fSsL --retry 5 --retry-all-errors -A "${USER_AGENT}" "${URL}" -o "${JAR}"
 echo "${SHA256}  ${JAR}" | sha256sum -c
 
 apk del .paper-build
@@ -88,7 +88,7 @@ RUN <<__DOCKER_EOF__
 set -euxo pipefail
 JAR="/fabric-${MC_VERSION}-${FABRIC_VERSION}-${INSTALLER_VERSION}.jar"
 
-curl -fSsL "https://meta.fabricmc.net/v2/versions/loader/${MC_VERSION}/${FABRIC_VERSION}/${INSTALLER_VERSION}/server/jar" -o "${JAR}"
+curl -fSsL --retry 5 --retry-all-errors "https://meta.fabricmc.net/v2/versions/loader/${MC_VERSION}/${FABRIC_VERSION}/${INSTALLER_VERSION}/server/jar" -o "${JAR}"
 __DOCKER_EOF__
 
 FROM base AS forge
@@ -103,8 +103,8 @@ set -euxo pipefail
 INSTALLER="forge-${FORGE_VERSION}-installer.jar"
 BASE_URL="https://maven.minecraftforge.net/net/minecraftforge/forge/${FORGE_VERSION}"
 
-curl -fSsL "${BASE_URL}/${INSTALLER}" -o "${INSTALLER}"
-SHA256=$(curl -fSsL "${BASE_URL}/${INSTALLER}.sha256")
+curl -fSsL --retry 5 --retry-all-errors "${BASE_URL}/${INSTALLER}" -o "${INSTALLER}"
+SHA256=$(curl -fSsL --retry 5 --retry-all-errors "${BASE_URL}/${INSTALLER}.sha256")
 echo "${SHA256}  ${INSTALLER}" | sha256sum -c
 
 java -jar "${INSTALLER}" --installServer /forge
@@ -149,8 +149,8 @@ set -euxo pipefail
 INSTALLER="neoforge-${NEOFORGE_VERSION}-installer.jar"
 BASE_URL="https://maven.neoforged.net/releases/net/neoforged/neoforge/${NEOFORGE_VERSION}"
 
-curl -fSsL "${BASE_URL}/${INSTALLER}" -o "${INSTALLER}"
-SHA256=$(curl -fSsL "${BASE_URL}/${INSTALLER}.sha256")
+curl -fSsL --retry 5 --retry-all-errors "${BASE_URL}/${INSTALLER}" -o "${INSTALLER}"
+SHA256=$(curl -fSsL --retry 5 --retry-all-errors "${BASE_URL}/${INSTALLER}.sha256")
 echo "${SHA256}  ${INSTALLER}" | sha256sum -c
 
 java -jar "${INSTALLER}" --installServer /neoforge
