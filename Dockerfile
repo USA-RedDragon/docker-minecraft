@@ -116,3 +116,35 @@ rm -rf /tmp/* \
   "${SERVER_LIBS}"/*/server-*-{bundled,unpacked,slim}.jar \
   "${SERVER_LIBS}"/*/server-*-mappings.*
 __DOCKER_EOF__
+
+FROM base AS neoforge
+
+ARG NEOFORGE_VERSION
+ENV NEOFORGE_VERSION=${NEOFORGE_VERSION}
+
+ENV MC_VARIANT=neoforge
+
+RUN --mount=type=bind,from=rcon-fix,source=/rcon-fix,target=/rcon-fix <<__DOCKER_EOF__
+set -euxo pipefail
+INSTALLER="neoforge-${NEOFORGE_VERSION}-installer.jar"
+BASE_URL="https://maven.neoforged.net/releases/net/neoforged/neoforge/${NEOFORGE_VERSION}"
+
+curl -fSsL "${BASE_URL}/${INSTALLER}" -o "${INSTALLER}"
+SHA256=$(curl -fSsL "${BASE_URL}/${INSTALLER}.sha256")
+echo "${SHA256}  ${INSTALLER}" | sha256sum -c
+
+java -jar "${INSTALLER}" --installServer /neoforge
+rm -f "${INSTALLER}" "${INSTALLER}.log" /neoforge/run.bat
+
+ARGS_FILE="/neoforge/libraries/net/neoforged/neoforge/${NEOFORGE_VERSION}/unix_args.txt"
+sed -i \
+  -e 's#libraries/#/neoforge/libraries/#g' \
+  -e 's#-DlibraryDirectory=libraries#-DlibraryDirectory=/neoforge/libraries#' \
+  "${ARGS_FILE}"
+
+SERVER_LIBS="/neoforge/libraries/net/minecraft/server"
+shopt -s nullglob
+rm -rf /tmp/* \
+  "${SERVER_LIBS}"/*/server-*.jar \
+  "${SERVER_LIBS}"/*/server-*-mappings.*
+__DOCKER_EOF__

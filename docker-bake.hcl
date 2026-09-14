@@ -25,7 +25,7 @@ variable "FABRIC_LEGACY_INSTALLER_VERSION" {
 }
 
 group "default" {
-  targets = ["paper", "fabric", "forge"]
+  targets = ["paper", "fabric", "forge", "neoforge"]
 }
 
 function "target_suffix" {
@@ -144,5 +144,36 @@ target "forge" {
   tags = concat(
     ["${REGISTRY}/forge:${split("-", v.forge)[0]}", "${REGISTRY}/forge:${v.forge}"],
     try(v.latest, false) ? ["${REGISTRY}/forge:latest"] : [],
+  )
+}
+
+target "neoforge" {
+  inherits = ["_common"]
+  name     = "neoforge-${target_suffix(v.mc)}"
+  matrix = {
+    v = [
+      { mc = "26.2", neoforge = "26.2.0.88", java = JAVA_25_IMAGE, latest = true },
+      { mc = "26.1.2", neoforge = "26.1.2.109", java = JAVA_25_IMAGE },
+      { mc = "1.21.11", neoforge = "21.11.45" },
+      { mc = "1.21.10", neoforge = "21.10.64" },
+      { mc = "1.21.8", neoforge = "21.8.54" },
+      { mc = "1.21.5", neoforge = "21.5.98" },
+      { mc = "1.21.4", neoforge = "21.4.157" },
+      { mc = "1.21.3", neoforge = "21.3.97" },
+      { mc = "1.21.1", neoforge = "21.1.250" },
+      { mc = "1.21", neoforge = "21.0.167" },
+      { mc = "1.20.6", neoforge = "20.6.141" },
+      { mc = "1.20.4", neoforge = "20.4.251", java = JAVA_17_IMAGE },
+      { mc = "1.20.2", neoforge = "20.2.93", java = JAVA_17_IMAGE },
+    ]
+  }
+  target = "neoforge"
+  args = {
+    JAVA_IMAGE       = try(v.java, null)
+    NEOFORGE_VERSION = v.neoforge
+  }
+  tags = concat(
+    ["${REGISTRY}/neoforge:${v.mc}", "${REGISTRY}/neoforge:${v.neoforge}"],
+    try(v.latest, false) ? ["${REGISTRY}/neoforge:latest"] : [],
   )
 }

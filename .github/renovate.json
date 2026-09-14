@@ -7,7 +7,9 @@
         {
             "customType": "regex",
             "description": "Java base image overrides",
-            "managerFilePatterns": ["/(^|/)docker-bake\\.hcl$/"],
+            "managerFilePatterns": [
+                "/(^|/)docker-bake\\.hcl$/"
+            ],
             "matchStrings": [
                 "\"(?<depName>amazoncorretto):(?<currentValue>[^@\"]+)@(?<currentDigest>sha256:[a-f0-9]{64})\""
             ],
@@ -17,7 +19,9 @@
         {
             "customType": "regex",
             "description": "Paper build for each Minecraft version",
-            "managerFilePatterns": ["/(^|/)docker-bake\\.hcl$/"],
+            "managerFilePatterns": [
+                "/(^|/)docker-bake\\.hcl$/"
+            ],
             "matchStrings": [
                 "mc\\s*=\\s*\"(?<packageName>[^\"]+)\",\\s*build\\s*=\\s*\"(?<currentValue>\\d+)\""
             ],
@@ -28,7 +32,9 @@
         {
             "customType": "regex",
             "description": "Fabric loader",
-            "managerFilePatterns": ["/(^|/)docker-bake\\.hcl$/"],
+            "managerFilePatterns": [
+                "/(^|/)docker-bake\\.hcl$/"
+            ],
             "matchStrings": [
                 "variable \"FABRIC_LOADER_VERSION\" \\{\\s*default\\s*=\\s*\"(?<currentValue>[^\"]+)\""
             ],
@@ -39,7 +45,9 @@
         {
             "customType": "regex",
             "description": "Fabric installer",
-            "managerFilePatterns": ["/(^|/)docker-bake\\.hcl$/"],
+            "managerFilePatterns": [
+                "/(^|/)docker-bake\\.hcl$/"
+            ],
             "matchStrings": [
                 "variable \"FABRIC_(?:LEGACY_)?INSTALLER_VERSION\" \\{\\s*default\\s*=\\s*\"(?<currentValue>[^\"]+)\""
             ],
@@ -50,13 +58,41 @@
         {
             "customType": "regex",
             "description": "Recommended Forge release for each Minecraft version",
-            "managerFilePatterns": ["/(^|/)docker-bake\\.hcl$/"],
+            "managerFilePatterns": [
+                "/(^|/)docker-bake\\.hcl$/"
+            ],
             "matchStrings": [
                 "forge\\s*=\\s*\"(?<packageName>[^-\"]+)-(?<currentValue>[^\"]+)\""
             ],
             "datasourceTemplate": "custom.forge-recommended",
             "depNameTemplate": "forge-{{{packageName}}}",
             "versioningTemplate": "semver-coerced"
+        },
+        {
+            "customType": "regex",
+            "description": "Stable NeoForge build for each Minecraft version",
+            "managerFilePatterns": [
+                "/(^|/)docker-bake\\.hcl$/"
+            ],
+            "matchStrings": [
+                "neoforge\\s*=\\s*\"(?<packageName>\\d+\\.\\d+)\\.(?<currentValue>\\d+)\"",
+                "neoforge\\s*=\\s*\"(?<packageName>\\d+\\.\\d+\\.\\d+)\\.(?<currentValue>\\d+)\""
+            ],
+            "datasourceTemplate": "custom.neoforge-builds",
+            "depNameTemplate": "neoforge-{{{packageName}}}",
+            "versioningTemplate": "loose"
+        },
+        {
+            "customType": "regex",
+            "description": "ASM used to build the RCON fix",
+            "managerFilePatterns": [
+                "/(^|/)Dockerfile$/"
+            ],
+            "matchStrings": [
+                "ARG ASM_VERSION=(?<currentValue>\\S+)"
+            ],
+            "datasourceTemplate": "maven",
+            "depNameTemplate": "org.ow2.asm:asm"
         }
     ],
     "customDatasources": {
@@ -71,35 +107,68 @@
             "transformTemplates": [
                 "{\"releases\": [{\"version\": $lookup(promos, \"{{packageName}}-recommended\")}], \"sourceUrl\": \"https://github.com/MinecraftForge/MinecraftForge\", \"homepage\": \"https://files.minecraftforge.net\"}"
             ]
+        },
+        "neoforge-builds": {
+            "defaultRegistryUrlTemplate": "https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge?line={{packageName}}",
+            "transformTemplates": [
+                "{\"releases\": [$filter(versions, function($v) { $substringBefore($v, \"{{packageName}}.\") = \"\" and $not($contains($v, \"-\")) and $not($contains($substringAfter($v, \"{{packageName}}.\"), \".\")) }).{\"version\": $substringAfter($, \"{{packageName}}.\")}], \"sourceUrl\": \"https://github.com/neoforged/NeoForge\", \"homepage\": \"https://neoforged.net\"}"
+            ]
         }
     },
     "packageRules": [
         {
-            "matchDatasources": ["custom.paper-builds"],
-            "matchUpdateTypes": ["major"],
+            "matchDatasources": [
+                "custom.paper-builds"
+            ],
+            "matchUpdateTypes": [
+                "major"
+            ],
+            "automerge": true
+        },
+        {
+            "matchDatasources": [
+                "custom.neoforge-builds"
+            ],
+            "matchUpdateTypes": [
+                "major"
+            ],
             "automerge": true
         },
         {
             "description": "Minecraft 1.19.2 - 1.20.2 are held on the 0.11 Fabric installer",
-            "matchPackageNames": ["net.fabricmc:fabric-installer"],
+            "matchPackageNames": [
+                "net.fabricmc:fabric-installer"
+            ],
             "matchCurrentVersion": "/^0\\./",
             "allowedVersions": "/^0\\./"
         },
         {
-            "matchDatasources": ["docker"],
-            "matchPackageNames": ["amazoncorretto"],
+            "matchDatasources": [
+                "docker"
+            ],
+            "matchPackageNames": [
+                "amazoncorretto"
+            ],
             "matchCurrentVersion": "/^17\\./",
             "allowedVersions": "/^17\\./"
         },
         {
-            "matchDatasources": ["docker"],
-            "matchPackageNames": ["amazoncorretto"],
+            "matchDatasources": [
+                "docker"
+            ],
+            "matchPackageNames": [
+                "amazoncorretto"
+            ],
             "matchCurrentVersion": "/^21\\./",
             "allowedVersions": "/^21\\./"
         },
         {
-            "matchDatasources": ["docker"],
-            "matchPackageNames": ["amazoncorretto"],
+            "matchDatasources": [
+                "docker"
+            ],
+            "matchPackageNames": [
+                "amazoncorretto"
+            ],
             "matchCurrentVersion": "/^25\\./",
             "allowedVersions": "/^25\\./"
         }

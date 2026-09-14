@@ -34,6 +34,8 @@ elif [ "${MC_VARIANT}" = "fabric" ]; then
     LAUNCH_ARGS="-jar /fabric-${MC_VERSION}-${FABRIC_VERSION}-${INSTALLER_VERSION}.jar"
 elif [ "${MC_VARIANT}" = "forge" ]; then
     LAUNCH_ARGS="@/forge/libraries/net/minecraftforge/forge/${FORGE_VERSION}/unix_args.txt"
+elif [ "${MC_VARIANT}" = "neoforge" ]; then
+    LAUNCH_ARGS="@/neoforge/libraries/net/neoforged/neoforge/${NEOFORGE_VERSION}/unix_args.txt"
 else
     echo "Unknown variant: ${MC_VARIANT}"
     exit 1
