@@ -44,19 +44,15 @@ while [ -n "${STAYING}" ]; do
         break
     fi
 
-    ANNOUNCE=""
     PENDING=""
     for mark in ${MARKS}; do
-        if [ "${mark}" -ge "${REMAINING}" ]; then
-            ANNOUNCE=${mark}
-        else
+        if [ "${mark}" -lt "${REMAINING}" ]; then
             PENDING="${PENDING} ${mark}"
+        elif [ $(( mark - REMAINING )) -le 1 ]; then
+            announce "${mark}"
         fi
     done
     MARKS=${PENDING}
-    if [ -n "${ANNOUNCE}" ] && [ $(( ANNOUNCE - REMAINING )) -le 1 ]; then
-        announce "${ANNOUNCE}"
-    fi
 
     STILL=""
     for player in $(players); do
@@ -67,7 +63,7 @@ while [ -n "${STAYING}" ]; do
     done
     STAYING=${STILL}
 
-    sleep 1
+    sleep 0.5
 done
 
 mc "${PREFIX}kick @a Server is restarting" > /dev/null
