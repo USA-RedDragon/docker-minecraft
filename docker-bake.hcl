@@ -44,7 +44,7 @@ target "paper" {
   name     = "paper-${target_suffix(v.mc)}"
   matrix = {
     v = [
-      { mc = "26.2", build = "123", java = JAVA_25_IMAGE, latest = true },
+      { mc = "26.2", build = "124", java = JAVA_25_IMAGE, latest = true },
       { mc = "26.1.2", build = "74", java = JAVA_25_IMAGE },
       { mc = "1.21.11", build = "132" },
       { mc = "1.21.10", build = "130" },
