@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
 
-ARG JAVA_IMAGE=amazoncorretto:21.0.12-alpine@sha256:9e690d83730561f0238dcce7fac79a201ed05fde45a198936f6bf5b212b61660
+ARG JAVA_IMAGE=amazoncorretto:21.0.12-alpine@sha256:0057581d2f023b8851cf60bc45b18b62c7e4cf27b46d230a83e1ce5d2b941ccf
 
 FROM ${JAVA_IMAGE} AS base
 
