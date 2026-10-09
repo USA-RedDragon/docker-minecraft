@@ -29,7 +29,7 @@ ENTRYPOINT [ "/entrypoint" ]
 
 FROM base AS rcon-fix
 
-ARG ASM_VERSION=9.10.1
+ARG ASM_VERSION=9.11
 
 WORKDIR /rcon-fix
 
