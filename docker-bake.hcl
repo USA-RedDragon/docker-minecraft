@@ -154,7 +154,7 @@ target "neoforge" {
     v = [
       { mc = "26.2", neoforge = "26.2.0.89", java = JAVA_25_IMAGE, latest = true },
       { mc = "26.1.2", neoforge = "26.1.2.115", java = JAVA_25_IMAGE },
-      { mc = "1.21.11", neoforge = "21.11.45" },
+      { mc = "1.21.11", neoforge = "21.11.48" },
       { mc = "1.21.10", neoforge = "21.10.64" },
       { mc = "1.21.8", neoforge = "21.8.54" },
       { mc = "1.21.5", neoforge = "21.5.98" },
