@@ -163,7 +163,7 @@ target "neoforge" {
       { mc = "1.21.1", neoforge = "21.1.257" },
       { mc = "1.21", neoforge = "21.0.167" },
       { mc = "1.20.6", neoforge = "20.6.141" },
-      { mc = "1.20.4", neoforge = "20.4.251", java = JAVA_17_IMAGE },
+      { mc = "1.20.4", neoforge = "20.4.253", java = JAVA_17_IMAGE },
       { mc = "1.20.2", neoforge = "20.2.93", java = JAVA_17_IMAGE },
     ]
   }
