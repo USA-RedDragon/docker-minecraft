@@ -12,7 +12,7 @@ variable "JAVA_25_IMAGE" {
 
 # The Fabric loader and installer are not tied to a Minecraft version
 variable "FABRIC_LOADER_VERSION" {
-  default = "0.19.5"
+  default = "0.20.0"
 }
 
 variable "FABRIC_INSTALLER_VERSION" {
