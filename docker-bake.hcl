@@ -159,7 +159,7 @@ target "neoforge" {
       { mc = "1.21.8", neoforge = "21.8.57" },
       { mc = "1.21.5", neoforge = "21.5.101" },
       { mc = "1.21.4", neoforge = "21.4.161" },
-      { mc = "1.21.3", neoforge = "21.3.97" },
+      { mc = "1.21.3", neoforge = "21.3.100" },
       { mc = "1.21.1", neoforge = "21.1.262" },
       { mc = "1.21", neoforge = "21.0.167" },
       { mc = "1.20.6", neoforge = "20.6.144" },
