@@ -133,7 +133,7 @@ target "forge" {
       { forge = "1.21.3-53.1.0" },
       { forge = "1.21.1-52.1.20" },
       { forge = "1.20.6-50.2.0" },
-      { forge = "1.20.1-47.4.23", java = JAVA_17_IMAGE },
+      { forge = "1.20.1-47.4.28", java = JAVA_17_IMAGE },
     ]
   }
   target = "forge"
