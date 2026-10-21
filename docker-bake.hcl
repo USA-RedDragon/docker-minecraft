@@ -125,7 +125,7 @@ target "forge" {
     v = [
       { forge = "26.2-65.1.5", java = JAVA_25_IMAGE, latest = true },
       { forge = "26.1.2-64.1.5", java = JAVA_25_IMAGE },
-      { forge = "1.21.11-61.2.0" },
+      { forge = "1.21.11-61.2.4" },
       { forge = "1.21.10-60.1.18" },
       { forge = "1.21.8-58.1.26" },
       { forge = "1.21.5-55.1.0" },
