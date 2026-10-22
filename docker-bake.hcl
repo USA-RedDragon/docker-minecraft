@@ -7,7 +7,7 @@ variable "JAVA_17_IMAGE" {
 }
 
 variable "JAVA_25_IMAGE" {
-  default = "amazoncorretto:25.0.4-alpine@sha256:19f1e2198abaaf201f5b9faa39222412da3fad66415e9dfe253bd6763415097e"
+  default = "amazoncorretto:25.0.4-alpine@sha256:9eb83d3559849f1513585497f772fe501ff4ae15fa8cd85652efd5df9599e2b4"
 }
 
 # The Fabric loader and installer are not tied to a Minecraft version
