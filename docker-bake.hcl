@@ -3,7 +3,7 @@ variable "REGISTRY" {
 }
 
 variable "JAVA_17_IMAGE" {
-  default = "amazoncorretto:17.0.21-alpine@sha256:7449010fa315925ded54eca9008cde8b69124b57657cd6e595114e5772516b12"
+  default = "amazoncorretto:17.0.21-alpine@sha256:c92e905c7d997a28279c24a2eb347836db0e3ca36a61d5fbd2c9c360b2674a05"
 }
 
 variable "JAVA_25_IMAGE" {
