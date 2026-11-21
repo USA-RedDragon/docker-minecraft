@@ -3,11 +3,11 @@ variable "REGISTRY" {
 }
 
 variable "JAVA_17_IMAGE" {
-  default = "amazoncorretto:17.0.21-alpine@sha256:c92e905c7d997a28279c24a2eb347836db0e3ca36a61d5fbd2c9c360b2674a05"
+  default = "amazoncorretto:17.0.21-alpine@sha256:45f029c659c0205534dee537231ba394daaea0b14ecbad59b55af9135a2c5211"
 }
 
 variable "JAVA_25_IMAGE" {
-  default = "amazoncorretto:25.0.5-alpine@sha256:abed4fe0730b802823f0cbc5c24ab8e3ba6023af99266f0e2ca3c08d9f6a20f9"
+  default = "amazoncorretto:25.0.5-alpine@sha256:1124f698f69d2185828dbd1a1ebeb9aee21884ac64bed7af3deeafd20b21a9dc"
 }
 
 # The Fabric loader and installer are not tied to a Minecraft version
